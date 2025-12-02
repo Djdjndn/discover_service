@@ -1,68 +1,78 @@
 package com.datn.discover_service.controller;
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.datn.discover_service.dto.CreatePostRequest;
+import com.datn.discover_service.dto.DiscoverItem;
+import com.datn.discover_service.dto.PostDetailResponse;
 import com.datn.discover_service.service.DiscoverService;
 
-import lombok.RequiredArgsConstructor;
-
 @RestController
-@RequestMapping("/discover")
-@RequiredArgsConstructor
+@RequestMapping("/api/discover")
 public class DiscoverController {
 
-    private final DiscoverService discoverService;
+    @Autowired
+    private DiscoverService discoverService;
 
-    @PostMapping("/posts")
-    public ResponseEntity<?> createPost(
-            @RequestHeader("userId") String userId,
-            @RequestHeader("username") String username,
-            @RequestHeader("avatar") String avatar,
-            @RequestBody CreatePostRequest request
-    ) {
-        String postId = discoverService.createPost(
-                userId,
-                username,
-                avatar,
-                request
-        );
-
-        return ResponseEntity.ok().body(
-                new java.util.HashMap<String, Object>() {{
-                    put("postId", postId);
-                    put("message", "Post created successfully!");
-                }}
-        );
+    // API 1: Danh sách Discover chung
+    @GetMapping
+    public ResponseEntity<List<DiscoverItem>> getDiscover(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "newest") String sort
+    ) throws Exception {
+        return ResponseEntity.ok(discoverService.getDiscoverList(page, size, sort));
     }
 
-    @GetMapping("/posts")
-    public ResponseEntity<?> getPosts(
-        @RequestParam(defaultValue = "0") int page,
-        @RequestParam(defaultValue = "10") int size
-    ) {
-        return ResponseEntity.ok(discoverService.getPosts(page, size));
+    // API 2: Danh sách Discover chỉ bài của người mình follow
+    @GetMapping("/following")
+    public ResponseEntity<List<DiscoverItem>> getDiscoverFollowing(
+            @RequestParam String userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) throws Exception {
+        return ResponseEntity.ok(discoverService.getDiscoverListFollowing(userId, page, size));
     }
 
-    @GetMapping("/posts/{postId}")
-    public ResponseEntity<?> getPostDetail(@PathVariable String postId) {
-        return ResponseEntity.ok(discoverService.getPostDetail(postId));
+    // API 3: Chi tiết bài viết
+    @GetMapping("/{postId}")
+    public ResponseEntity<PostDetailResponse> getPostDetail(
+            @PathVariable String postId,
+            @RequestParam(required = false) String userId
+    ) throws Exception {
+        PostDetailResponse resp = discoverService.getPostDetail(postId, userId);
+        if (resp == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(resp);
     }
 
+    // API 4: Search bài viết
     @GetMapping("/search")
-    public ResponseEntity<?> searchPosts(
-            @RequestParam String query
-    ) {
-        return ResponseEntity.ok(discoverService.searchPosts(query));
+    public ResponseEntity<List<DiscoverItem>> search(
+            @RequestParam String query,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) throws Exception {
+        return ResponseEntity.ok(discoverService.search(query, page, size));
     }
 
-
+    // API 5: Filter theo địa điểm
+    @GetMapping("/filter")
+    public ResponseEntity<List<DiscoverItem>> filterByLocation(
+            @RequestParam double lat,
+            @RequestParam double lng,
+            @RequestParam(defaultValue = "50") double radiusKm,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) throws Exception {
+        return ResponseEntity.ok(discoverService.filterByLocation(lat, lng, radiusKm, page, size));
+    }
 }

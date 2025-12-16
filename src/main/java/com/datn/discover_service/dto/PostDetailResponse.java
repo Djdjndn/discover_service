@@ -13,6 +13,7 @@ public class PostDetailResponse {
     private LikesInfoDto likes;
     private List<CommentDto> comments;
 
+    // -------------------------
     @Data
     public static class PostDto {
         private String postId;
@@ -37,12 +38,14 @@ public class PostDetailResponse {
         private String coverPhoto;
     }
 
+    // ✅ LIKE INFO
     @Data
     public static class LikesInfoDto {
-        private int count;
+        private long count;
         private boolean userLiked;
     }
 
+    // ✅ COMMENT
     @Data
     public static class CommentDto {
         private String commentId;
@@ -53,3 +56,4 @@ public class PostDetailResponse {
         private long createdAt;
     }
 }
+

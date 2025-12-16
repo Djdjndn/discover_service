@@ -17,6 +17,6 @@ public class DiscoverItem {
     private String userName;
     private String userAvatar;
 
-    private int likesCount;
-    private int commentsCount;
+    private long likesCount;
+    private long commentsCount;
 }

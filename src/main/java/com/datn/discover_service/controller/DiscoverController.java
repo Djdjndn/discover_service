@@ -1,7 +1,6 @@
 package com.datn.discover_service.controller;
 
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,11 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.datn.discover_service.dto.CreatePostCommentRequest;
 import com.datn.discover_service.dto.CreatePostRequest;
 import com.datn.discover_service.dto.DiscoverItem;
-import com.datn.discover_service.dto.PostDetailResponse;
+import com.datn.discover_service.dto.PostResponse;
 import com.datn.discover_service.model.PostComment;
 import com.datn.discover_service.service.DiscoverService;
-
-
 
 @RestController
 @RequestMapping("/api/discover")
@@ -30,103 +27,101 @@ public class DiscoverController {
     @Autowired
     private DiscoverService discoverService;
 
-    // API 1: Danh sách Discover chung
+    // =========================
+    // API 1: Discover chung
+    // =========================
     @GetMapping
     public ResponseEntity<List<DiscoverItem>> getDiscover(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "newest") String sort
+            @RequestParam(defaultValue = "createdAt") String sort
     ) throws Exception {
-        return ResponseEntity.ok(discoverService.getDiscoverList(page, size, sort));
+        return ResponseEntity.ok(
+                discoverService.getDiscoverList(page, size, sort)
+        );
     }
 
-    // API 2: Danh sách Discover chỉ bài của người mình follow
+    // =========================
+    // API 2: Discover following
+    // =========================
     @GetMapping("/following")
     public ResponseEntity<List<DiscoverItem>> getDiscoverFollowing(
             @RequestParam String userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) throws Exception {
-        return ResponseEntity.ok(discoverService.getDiscoverListFollowing(userId, page, size));
-    }
-
-    // API 3: Chi tiết bài viết
-    @GetMapping("/post/{postId}")
-    public ResponseEntity<PostDetailResponse> getPostDetail(
-            @PathVariable String postId,
-            @RequestParam(required = false) String userId
-    ) throws Exception {
-        PostDetailResponse resp = discoverService.getPostDetail(postId, userId);
-        if (resp == null) {
-            return ResponseEntity.notFound().build();
-        }
-        return ResponseEntity.ok(resp);
-    }
-
-    // API 4: Search bài viết
-    @GetMapping("/search")
-    public ResponseEntity<List<DiscoverItem>> search(
-            @RequestParam String query,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) throws Exception {
-        return ResponseEntity.ok(discoverService.search(query, page, size));
-    }
-
-    // API 5: Filter theo địa điểm
-    @GetMapping("/filter")
-    public ResponseEntity<List<DiscoverItem>> filterByLocation(
-            @RequestParam double lat,
-            @RequestParam double lng,
-            @RequestParam(defaultValue = "50") double radiusKm,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) throws Exception {
-        return ResponseEntity.ok(discoverService.filterByLocation(lat, lng, radiusKm, page, size));
-    }
-    // API 6: Tạo bài viết mới
-    @PostMapping("/post")
-    public ResponseEntity<?> createPost(@RequestBody CreatePostRequest request) throws Exception {
-        String postId = discoverService.createPost(request);
         return ResponseEntity.ok(
-            Map.of("postId", postId, "message", "Post created successfully")
+                discoverService.getDiscoverListFollowing(userId, page, size)
         );
     }
-    // API 7: Like một bài viết
-    @PostMapping("/post/{postId}/like")
-    public ResponseEntity<?> likePost(
+
+    // =========================
+    // API 3: Get Post (FEED / CREATE / COMMENT)
+    // =========================
+    @GetMapping("/posts/{postId}")
+        public ResponseEntity<PostResponse> getPost(
+                @PathVariable String postId,
+                @RequestParam(required = false) String userId
+        ) throws Exception {
+        return ResponseEntity.ok(
+                discoverService.buildPostResponse(postId, userId)
+        );
+}
+    // =========================
+    // API 4: Create Post
+    // =========================
+    @PostMapping("/posts")
+    public ResponseEntity<PostResponse> createPost(
+            @RequestBody CreatePostRequest request
+    ) throws Exception {
+
+        String postId = discoverService.createPost(request);
+
+        // trả luôn PostResponse cho FE add vào feed
+        return ResponseEntity.ok(
+                discoverService.buildPostResponse(postId, request.getUserId())
+        );
+    }
+
+    // =========================
+    // API 5: Like / Unlike
+    // =========================
+    @PostMapping("/posts/{postId}/like")
+    public ResponseEntity<Void> likePost(
             @PathVariable String postId,
             @RequestParam String userId
     ) throws Exception {
         discoverService.likePost(postId, userId);
-        return ResponseEntity.ok(Map.of("message", "liked"));
+        return ResponseEntity.ok().build();
     }
 
-    // API 8: Unlike một bài viết
-    @DeleteMapping("/post/{postId}/like")
-    public ResponseEntity<?> unlikePost(
+    @DeleteMapping("/posts/{postId}/like")
+    public ResponseEntity<Void> unlikePost(
             @PathVariable String postId,
             @RequestParam String userId
     ) throws Exception {
         discoverService.unlikePost(postId, userId);
-        return ResponseEntity.ok(Map.of("message", "unliked"));
+        return ResponseEntity.ok().build();
     }
 
+    // =========================
+    // API 6: Comment
+    // =========================
+    @PostMapping("/posts/{postId}/comments")
+        public ResponseEntity<Void> addComment(
+                @PathVariable String postId,
+                @RequestBody CreatePostCommentRequest request
+        ) throws Exception {
+                discoverService.addPostComment(postId, request);
+                return ResponseEntity.ok().build();
+        }
 
-    // API 9: Comment một bài viết
-    @PostMapping("/post/{postId}/comment")
-    public ResponseEntity<?> addComment(
-            @PathVariable String postId,
-            @RequestBody CreatePostCommentRequest req
-    ) {
-        discoverService.addPostComment(postId, req);
-        return ResponseEntity.ok(Map.of("message", "commented"));
-    }
-
-    @GetMapping("/post/{postId}/comment")
+    @GetMapping("/posts/{postId}/comments")
     public ResponseEntity<List<PostComment>> getComments(
             @PathVariable String postId
     ) throws Exception {
-        return ResponseEntity.ok(discoverService.getPostComments(postId));
+        return ResponseEntity.ok(
+                discoverService.getPostComments(postId)
+        );
     }
 }

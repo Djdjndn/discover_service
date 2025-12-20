@@ -1,222 +1,204 @@
 package com.datn.discover_service.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+    import java.util.ArrayList;
+    import java.util.List;
+    import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+    import org.springframework.beans.factory.annotation.Autowired;
+    import org.springframework.stereotype.Service;
 
-import com.datn.discover_service.dto.CreatePostCommentRequest;
-import com.datn.discover_service.dto.CreatePostRequest;
-import com.datn.discover_service.dto.DiscoverItem;
-import com.datn.discover_service.dto.PostDetailResponse;
-import com.datn.discover_service.model.Post;
-import com.datn.discover_service.model.PostComment;
-import com.datn.discover_service.model.PostLike;
-import com.datn.discover_service.model.Trip;
-import com.datn.discover_service.model.User;
-import com.datn.discover_service.repository.FollowRepository;
-import com.datn.discover_service.repository.PostCommentRepository;
-import com.datn.discover_service.repository.PostLikeRepository;
-import com.datn.discover_service.repository.PostRepository;
-import com.datn.discover_service.repository.TripRepository;
-import com.datn.discover_service.repository.UsersRepository;
+    import com.datn.discover_service.dto.CreatePostCommentRequest;
+    import com.datn.discover_service.dto.CreatePostRequest;
+    import com.datn.discover_service.dto.DiscoverItem;
+    import com.datn.discover_service.dto.PostResponse;
+    import com.datn.discover_service.model.Post;
+    import com.datn.discover_service.model.PostComment;
+    import com.datn.discover_service.model.PostLike;
+    import com.datn.discover_service.model.Trip;
+    import com.datn.discover_service.model.User;
+    import com.datn.discover_service.repository.FollowRepository;
+    import com.datn.discover_service.repository.PostCommentRepository;
+    import com.datn.discover_service.repository.PostLikeRepository;
+    import com.datn.discover_service.repository.PostRepository;
+    import com.datn.discover_service.repository.TripRepository;
+    import com.datn.discover_service.repository.UsersRepository;
+
+    @Service
+    public class DiscoverService {
+
+        @Autowired
+        private PostRepository postRepository;
+
+        @Autowired
+        private UsersRepository usersRepository;
+
+        @Autowired
+        private FollowRepository followRepository;
+
+        @Autowired
+        private PostLikeRepository postLikeRepository;
+
+        @Autowired
+        private PostCommentRepository postCommentRepository;
+
+        @Autowired
+        private TripRepository tripRepository;
 
 
-@Service
-public class DiscoverService {
-
-    @Autowired
-    private PostRepository postRepository;
-
-    @Autowired
-    private UsersRepository usersRepository;
-
-    @Autowired
-    private TripRepository tripRepository;
-
-    @Autowired
-    private FollowRepository followRepository;
-
-    @Autowired
-    private PostLikeRepository postLikeRepository;
-
-    @Autowired
-    private PostCommentRepository postCommentRepository;
-
-    // =========================
-    // API 1: Discover chung
-    // =========================
-    public List<DiscoverItem> getDiscoverList(int page, int size, String sort) throws Exception {
-        List<Post> posts = postRepository.getPublicPosts(page, size, sort);
-        return mapPostsToDiscoverItems(posts);
-    }
-
-    // =========================
-    // API 2: Discover following
-    // =========================
-    public List<DiscoverItem> getDiscoverListFollowing(String userId, int page, int size) throws Exception {
-        List<String> followingIds = followRepository.getFollowingIds(userId);
-        if (followingIds.isEmpty()) return new ArrayList<>();
-
-        List<Post> posts = postRepository.getPostsByUserIds(followingIds, page, size);
-        return mapPostsToDiscoverItems(posts);
-    }
-
-    // =========================
-    // API 3: Post detail
-    // =========================
-    public PostDetailResponse getPostDetail(String postId, String currentUserId) throws Exception {
-
-        Post post = postRepository.getPost(postId);
-        if (post == null) return null;
-
-        User user = usersRepository.getUser(post.getUserId());
-
-        Trip trip = null;
-        if (post.getTripId() != null && !post.getTripId().isBlank()) {
-            trip = tripRepository.getTrip(post.getTripId());
+        // =========================
+        // API 1: Discover chung
+        // =========================
+        public List<DiscoverItem> getDiscoverList(int page, int size, String sort) throws Exception {
+            List<Post> posts = postRepository.getPublicPosts(page, size, sort);
+            return mapPostsToDiscoverItems(posts);
         }
 
-        // ----- Likes -----
-        long likeCount = postLikeRepository.countByPostId(postId);
-        boolean userLiked = false;
-        if (currentUserId != null && !currentUserId.isBlank()) {
-            userLiked = postLikeRepository.exists(postId, currentUserId);
+        // =========================
+        // API 2: Discover following
+        // =========================
+        public List<DiscoverItem> getDiscoverListFollowing(String userId, int page, int size) throws Exception {
+            List<String> followingIds = followRepository.getFollowingIds(userId);
+            if (followingIds.isEmpty()) return new ArrayList<>();
+
+            List<Post> posts = postRepository.getPostsByUserIds(followingIds, page, size);
+            return mapPostsToDiscoverItems(posts);
         }
 
-        // ----- Comments -----
-        List<PostComment> comments = postCommentRepository.findByPostId(postId);
+        // =========================
+        // API 3: Build PostResponse (Facebook style)
+        // =========================
+        public PostResponse buildPostResponse(String postId, String currentUserId) throws Exception {
 
-        // ================= BUILD RESPONSE =================
-        PostDetailResponse resp = new PostDetailResponse();
-
-        // Post
-        PostDetailResponse.PostDto postDto = new PostDetailResponse.PostDto();
-        postDto.setPostId(post.getPostId());
-        postDto.setTitle(post.getTitle());
-        postDto.setContent(post.getContent());
-        postDto.setImages(post.getImages());
-        postDto.setTags(post.getTags());
-        postDto.setCreatedAt(post.getCreatedAt());
-        resp.setPost(postDto);
-
-        // User
-        if (user != null) {
-            PostDetailResponse.UserDto userDto = new PostDetailResponse.UserDto();
-            userDto.setUserId(user.getId());
-            userDto.setUserName(user.getFirstName() + " " + user.getLastName());
-            userDto.setAvatar(user.getProfilePicture());
-            resp.setUser(userDto);
-        }
-
-        // Trip
-        if (trip != null) {
-            PostDetailResponse.TripShortDto tripDto = new PostDetailResponse.TripShortDto();
-            tripDto.setTripId(trip.getId());
-            tripDto.setTitle(trip.getTitle());
-            tripDto.setCoverPhoto(trip.getCoverPhoto());
-            resp.setTrip(tripDto);
-        }
-
-        // Likes info
-        PostDetailResponse.LikesInfoDto likesInfo = new PostDetailResponse.LikesInfoDto();
-        likesInfo.setCount(likeCount);
-        likesInfo.setUserLiked(userLiked);
-        resp.setLikes(likesInfo);
-
-        // Comments
-        List<PostDetailResponse.CommentDto> commentDtos = new ArrayList<>();
-        for (PostComment c : comments) {
-
-            PostDetailResponse.CommentDto cDto = new PostDetailResponse.CommentDto();
-            cDto.setCommentId(c.getId());
-            cDto.setUserId(c.getUserId());
-            cDto.setContent(c.getContent());
-            cDto.setCreatedAt(c.getCreatedAt());
-
-            User cu = usersRepository.getUser(c.getUserId());
-            if (cu != null) {
-                cDto.setUserName(cu.getFirstName() + " " + cu.getLastName());
-                cDto.setAvatar(cu.getProfilePicture());
+            Post post = postRepository.getPost(postId);
+            if (post == null) {
+                throw new RuntimeException("Post not found: " + postId);
             }
 
-            commentDtos.add(cDto);
+            User user = usersRepository.getUser(post.getUserId());
+            String tripImage = null;
+            String tripName = null;
+            long likeCount = postLikeRepository.countByPostId(postId);
+            long commentCount = postCommentRepository.countByPostId(postId);
+
+            boolean isLiked = false;
+            if (currentUserId != null && !currentUserId.isBlank()) {
+                isLiked = postLikeRepository.exists(postId, currentUserId);
+            }
+            if (post.getTripId() != null) {
+                Trip trip = tripRepository.getTrip(post.getTripId());
+                if (trip != null) {
+                    tripImage = trip.getCoverPhoto();
+                    tripName = trip.getTitle();
+                }
+            }
+            return new PostResponse(
+                    post.getPostId(),
+                    post.getContent(),
+                    Boolean.TRUE.equals(post.getIsPublic()),
+                    post.getCreatedAt(),
+
+                    user != null ? user.getId() : null,
+                    user != null ? user.getFirstName() + " " + user.getLastName() : null,
+                    user != null ? user.getProfilePicture() : null,
+
+                    post.getTripId(),
+                    tripName,
+                    tripImage,  
+
+                    likeCount,
+                    commentCount,
+                    isLiked
+            );
         }
-        resp.setComments(commentDtos);
 
-        return resp;
-    }
+        // =========================
+        // API: Create Post
+        // =========================
+        public String createPost(CreatePostRequest req) throws Exception {
 
-    // =========================
-    // API: Create Post
-    // =========================
-    public String createPost(CreatePostRequest req) throws Exception {
+            User user = usersRepository.getUser(req.getUserId());
+            if (user == null) throw new Exception("User not found");
 
-        User user = usersRepository.getUser(req.getUserId());
-        if (user == null) throw new Exception("User not found");
+            String postId = UUID.randomUUID().toString();
 
-        String postId = UUID.randomUUID().toString();
+            Post post = new Post();
+            post.setPostId(postId);
+            post.setUserId(req.getUserId());
+            post.setTripId(req.getTripId());
+            post.setTitle(req.getTitle());
+            post.setContent(req.getContent());
+            post.setImages(req.getImages());
+            post.setTags(req.getTags());
+            post.setCreatedAt(System.currentTimeMillis());
+            post.setIsPublic(true); // 🔥 giữ logic của bạn
 
-        Post post = new Post();
-        post.setPostId(postId);
-        post.setUserId(req.getUserId());
-        post.setTitle(req.getTitle());
-        post.setContent(req.getContent());
-        post.setImages(req.getImages());
-        post.setTags(req.getTags());
-        post.setTripId(req.getTripId());
-        post.setCreatedAt(System.currentTimeMillis());
-        post.setIsPublic(true);
-        post.setLikesCount(0);
-        post.setCommentsCount(0);
+            postRepository.createPost(post);
+            return postId;
+        }
 
-        postRepository.createPost(post);
-        return postId;
-    }
-
-    // =========================
-    // API: Like / Unlike
-    // =========================
-    public void likePost(String postId, String userId) throws Exception {
-        if (!postLikeRepository.exists(postId, userId)) {
+        // =========================
+        // API: Like / Unlike
+        // =========================
+        public void likePost(String postId, String userId) throws Exception {
             PostLike like = new PostLike();
             like.setPostId(postId);
             like.setUserId(userId);
             like.setCreatedAt(System.currentTimeMillis());
-            postLikeRepository.like(like);
+            postLikeRepository.like(like); // set() → ghi đè
         }
-    }
 
-    public void unlikePost(String postId, String userId) throws Exception {
-        postLikeRepository.unlike(postId, userId);
-    }
+        public void unlikePost(String postId, String userId) {
+            try {
+                postLikeRepository.unlike(postId, userId);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to unlike post", e);
+            }
+}
 
-    // =========================
-    // API: Comment
-    // =========================
-    public void addPostComment(String postId, CreatePostCommentRequest req) {
+        // =========================
+        // API: Comment
+        // =========================
+        public void addPostComment(String postId, CreatePostCommentRequest req) throws Exception {
 
-        PostComment c = new PostComment();
-        c.setPostId(postId);
-        c.setUserId(req.getUserId());
-        c.setContent(req.getContent());
-        c.setCreatedAt(System.currentTimeMillis());
-        c.setUserName(req.getUserName());
-        c.setAvatar(req.getAvatar());
+            PostComment c = new PostComment();
+            c.setPostId(postId);
+            c.setUserId(req.getUserId());
+            c.setContent(req.getContent());
+            c.setCreatedAt(System.currentTimeMillis());
+            User user = usersRepository.getUser(req.getUserId());
+            if (usersRepository != null) {
+            String displayName = "";
 
-        postCommentRepository.save(c);
-    }
+            if (user.getFirstName() != null) {
+                displayName += user.getFirstName();
+            }
+            if (user.getLastName() != null) {
+                if (!displayName.isEmpty()) displayName += " ";
+                displayName += user.getLastName();
+            }
 
-    public List<PostComment> getPostComments(String postId) throws Exception {
-        return postCommentRepository.findByPostId(postId);
-    }
+            if (displayName.isEmpty()) {
+                displayName = "Ẩn danh";
+            }
 
-    // =========================
-    // Helper
-    // =========================
-    private List<DiscoverItem> mapPostsToDiscoverItems(List<Post> posts) throws Exception {
+            c.setUserName(displayName);
+            c.setAvatar(user.getProfilePicture());
+        } else {
+            c.setUserName("Ẩn danh");
+            c.setAvatar(null);
+        }
+
+            postCommentRepository.save(c);
+        }
+
+        public List<PostComment> getPostComments(String postId) throws Exception {
+            return postCommentRepository.findByPostId(postId);
+        }
+
+        // =========================
+        // Helper
+        // =========================
+        private List<DiscoverItem> mapPostsToDiscoverItems(List<Post> posts) throws Exception {
 
         List<DiscoverItem> result = new ArrayList<>();
 
@@ -228,13 +210,12 @@ public class DiscoverService {
             long commentCount = postCommentRepository.countByPostId(post.getPostId());
 
             DiscoverItem item = new DiscoverItem();
+
             item.setPostId(post.getPostId());
-            item.setTitle(post.getTitle());
-            item.setCoverPhoto(post.getCoverPhoto());
-            item.setCreatedAt(post.getCreatedAt());
-            item.setTags(post.getTags());
+            item.setCaption(post.getContent());
             item.setLikesCount(likeCount);
             item.setCommentsCount(commentCount);
+            item.setCreatedAt(post.getCreatedAt());
 
             if (user != null) {
                 item.setUserId(user.getId());
@@ -242,32 +223,42 @@ public class DiscoverService {
                 item.setUserAvatar(user.getProfilePicture());
             }
 
+            // ✅ FIX CHUẨN: lấy ảnh từ Trip
+            if (post.getTripId() != null) {
+                Trip trip = tripRepository.getTrip(post.getTripId());
+                if (trip != null) {
+                    item.setTripImage(trip.getCoverPhoto());
+                }
+            }
+
             result.add(item);
         }
 
         return result;
     }
-    // =========================
-    // API 4: Search bài viết
-    // =========================
-    public List<DiscoverItem> search(String query, int page, int size) throws Exception {
-        if (query == null || query.trim().isEmpty()) {
+
+        // =========================
+        // API: Search
+        // =========================
+        public List<DiscoverItem> search(String query, int page, int size) throws Exception {
+            if (query == null || query.trim().isEmpty()) {
+                return new ArrayList<>();
+            }
+            String q = query.trim();
+            List<Post> posts = postRepository.searchPublicPostsFlexible(q, page, size);
+            return mapPostsToDiscoverItems(posts);
+        }
+
+        // =========================
+        // API: Filter (stub)
+        // =========================
+        public List<DiscoverItem> filterByLocation(
+                double lat,
+                double lng,
+                double radiusKm,
+                int page,
+                int size
+        ) {
             return new ArrayList<>();
         }
-        String q = query.trim();
-
-        // Search theo text (title/content/tags) - phía repo sẽ filter
-        List<Post> posts = postRepository.searchPublicPostsFlexible(q, page, size);
-        return mapPostsToDiscoverItems(posts);
     }
-
-    // =========================
-    // API 5: Filter theo địa điểm
-    // (Bạn đang có endpoint ở Controller nên Service cần có hàm để compile)
-    // =========================
-    public List<DiscoverItem> filterByLocation(double lat, double lng, double radiusKm, int page, int size) throws Exception {
-        // Firestore không hỗ trợ geo query “bán kính” trực tiếp nếu bạn chưa setup geohash.
-        // Tạm thời trả empty để hệ thống compile & chạy ổn.
-        return new ArrayList<>();
-}
-}

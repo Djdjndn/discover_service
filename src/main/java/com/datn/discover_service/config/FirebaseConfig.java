@@ -16,18 +16,22 @@ import com.google.firebase.cloud.FirestoreClient;
 @Configuration
 public class FirebaseConfig {
 
-    @Bean
+    // destroyMethod="" để Spring KHÔNG tự gọi close() cho Firestore
+    @Bean(destroyMethod = "")
     public Firestore firestore() throws IOException {
 
-        // Load file from resources (classpath)
-        ClassPathResource resource = new ClassPathResource("firebase-service.json");
-        InputStream serviceAccount = resource.getInputStream();
+        // Devtools / restart nóng có thể để lại FirebaseApp cũ (Firestore đã bị close)
+        // => delete hết app cũ để init mới sạch sẽ
+        for (FirebaseApp app : FirebaseApp.getApps()) {
+            try {
+                app.delete();
+            } catch (Exception ignored) {}
+        }
 
-        FirebaseOptions options = FirebaseOptions.builder()
-                .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                .build();
-
-        if (FirebaseApp.getApps().isEmpty()) {
+        try (InputStream serviceAccount = new ClassPathResource("firebase-service.json").getInputStream()) {
+            FirebaseOptions options = FirebaseOptions.builder()
+                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                    .build();
             FirebaseApp.initializeApp(options);
         }
 

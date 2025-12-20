@@ -14,4 +14,8 @@ public class CreatePostRequest {
     private List<String> tags;
 
     private String tripId;
+
+    public String getUserId() {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
 }

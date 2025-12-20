@@ -1,7 +1,6 @@
 package com.datn.discover_service.model;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -33,9 +32,6 @@ public class Trip {
     private String content; // User's feelings/review about their trip
     private String tags; // JSON array: ["food", "beach", "adventure"] for categorization
     private List<Plan> plans;
-    private LocalDateTime createdAt;
+    private Object createdAt;
 
-    public void setId(String id) {
-        throw new UnsupportedOperationException("Not supported yet.");
-    }
 }

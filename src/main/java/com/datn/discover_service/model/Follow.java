@@ -13,7 +13,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class Follow {
 
-    private Long id;
     private String followerId; // Firebase UID
     private String followingId; // Firebase UID
     private LocalDateTime createdAt;

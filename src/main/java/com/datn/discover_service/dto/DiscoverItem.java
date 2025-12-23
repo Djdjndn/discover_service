@@ -1,25 +1,21 @@
 package com.datn.discover_service.dto;
 
+import java.time.LocalDateTime;
+
 import lombok.Data;
+
 
 @Data
 public class DiscoverItem {
-
-    private String postId;
-
-    // ===== USER =====
+    private String tripId;
     private String userId;
     private String userName;
-    private String userAvatar;   // ⭐ avatar user
+    private String userAvatar;
 
-    // ===== POST =====
-    private String caption;      // hoặc title / content
-    private Long likesCount;
-    private Long commentsCount;
-
-    // ===== TRIP =====
-    private String tripImage;    // ⭐ ẢNH TRIP (QUAN TRỌNG NHẤT)
-
-    private long createdAt;
+    private String tripImage;
+    private String caption;
+    private String tags;
+    private boolean isFollowing;
+    private String isPublic;
+    private LocalDateTime sharedAt;
 }
-

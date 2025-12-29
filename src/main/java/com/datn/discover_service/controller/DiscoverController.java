@@ -4,11 +4,14 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.datn.discover_service.dto.DiscoverItem;
+import com.datn.discover_service.dto.ShareTripRequest;
 import com.datn.discover_service.service.DiscoverService;
 
 @RestController
@@ -39,4 +42,9 @@ public class DiscoverController {
     ) throws Exception {
         return discoverService.getDiscoverListFollowing(userId, page, size);
     }
+
+    @PostMapping("/share-trip")
+    public void shareTrip(@RequestBody ShareTripRequest req) throws Exception {
+        discoverService.shareTrip(req);
+}
 }

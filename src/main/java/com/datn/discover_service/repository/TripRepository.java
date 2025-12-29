@@ -1,16 +1,22 @@
 package com.datn.discover_service.repository;
 
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import com.datn.discover_service.model.Trip;
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.SetOptions;
 
 @Repository
 public class TripRepository {
@@ -30,8 +36,27 @@ public class TripRepository {
                 .get();
 
         if (!doc.exists()) return null;
-
         return mapDocToTrip(doc);
+    }
+
+    // ✅ ADD: Optional findById (để PlanService dùng .findById)
+    public Optional<Trip> findById(String tripId) throws Exception {
+        return Optional.ofNullable(getTrip(tripId));
+    }
+
+    // ✅ ADD: save() chỉ update field cần thiết (likeCount)
+    public void save(Trip trip) throws Exception {
+        if (trip == null || trip.getId() == null) {
+            throw new IllegalArgumentException("Trip ID must not be null");
+        }
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("likeCount", trip.getLikeCount());
+
+        db.collection(COLLECTION)
+                .document(trip.getId())
+                .set(updates, SetOptions.merge())
+                .get();
     }
 
     // =========================
@@ -46,7 +71,6 @@ public class TripRepository {
                 .orderBy("sharedAt", Query.Direction.DESCENDING)
                 .limit(size);
 
-        // NOTE: page > 0 thì dùng startAfter (để sau nếu cần)
         QuerySnapshot snapshot = query.get().get();
 
         List<Trip> result = new ArrayList<>();
@@ -63,30 +87,64 @@ public class TripRepository {
     // userId in followingIds
     // =========================
     public List<Trip> getFollowerTrips(
-        List<String> followingIds,
-        int page,
-        int size
-) throws Exception {
+            List<String> followingIds,
+            int page,
+            int size
+    ) throws Exception {
 
-    if (followingIds == null || followingIds.isEmpty()) {
-        return new ArrayList<>();
+        if (followingIds == null || followingIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Query query = db.collection(COLLECTION)
+                .whereIn("userId", followingIds)
+                .whereIn("isPublic", List.of("public", "follower"))
+                .orderBy("sharedAt", Query.Direction.DESCENDING)
+                .limit(size);
+
+        QuerySnapshot snapshot = query.get().get();
+
+        List<Trip> result = new ArrayList<>();
+        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+            result.add(mapDocToTrip(doc));
+        }
+
+        return result;
     }
 
-    Query query = db.collection(COLLECTION)
-            .whereIn("userId", followingIds)
-            .whereIn("isPublic", List.of("public", "follower"))
-            .orderBy("sharedAt", Query.Direction.DESCENDING)
-            .limit(size);
+    // =========================
+    // Profile trips
+    // =========================
+    public List<Trip> getTripsByUserForProfile(
+            String userId,
+            boolean isOwner,
+            boolean isFollower,
+            int page,
+            int size
+    ) throws Exception {
 
-    QuerySnapshot snapshot = query.get().get();
+        Query query = db.collection(COLLECTION)
+                .whereEqualTo("userId", userId)
+                .orderBy("sharedAt", Query.Direction.DESCENDING)
+                .limit(size);
 
-    List<Trip> result = new ArrayList<>();
-    for (DocumentSnapshot doc : snapshot.getDocuments()) {
-        result.add(mapDocToTrip(doc));
+        if (!isOwner) {
+            if (isFollower) {
+                query = query.whereIn("isPublic", List.of("public", "follower"));
+            } else {
+                query = query.whereEqualTo("isPublic", "public");
+            }
+        }
+
+        QuerySnapshot snapshot = query.get().get();
+
+        List<Trip> result = new ArrayList<>();
+        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+            result.add(mapDocToTrip(doc));
+        }
+
+        return result;
     }
-
-    return result;
-}
 
     // =========================
     // Mapper
@@ -103,61 +161,58 @@ public class TripRepository {
         trip.setTags(doc.getString("tags"));
         trip.setIsPublic(doc.getString("isPublic"));
 
-        // =========================
-        // sharedAt (String OR Timestamp)
-        // =========================
+        // ✅ FIX: sharedAt là Timestamp (đúng theo Firestore)
         Object sharedAtObj = doc.get("sharedAt");
-
-        if (sharedAtObj instanceof com.google.cloud.Timestamp ts) {
-            trip.setSharedAt(
-                ts.toDate()
-                .toInstant()
-                .atZone(java.time.ZoneId.systemDefault())
-                .toLocalDateTime()
-            );
-        } else if (sharedAtObj instanceof String str) {
-            try {
-                trip.setSharedAt(java.time.LocalDateTime.parse(str));
-            } catch (Exception e) {
-                trip.setSharedAt(null);
-            }
+        if (sharedAtObj instanceof Timestamp ts) {
+            trip.setSharedAt(ts);
         } else {
             trip.setSharedAt(null);
         }
 
+        // likeCount (nếu có)
+        Long likeCount = doc.getLong("likeCount");
+        if (likeCount != null) {
+            trip.setLikeCount(likeCount.intValue());
+        }
+
         return trip;
     }
-    public List<Trip> getTripsByUserForProfile(
-        String userId,
-        boolean isOwner,
-        boolean isFollower,
-        int page,
-        int size
-    ) throws Exception {
 
-        Query query = db.collection(COLLECTION)
-                .whereEqualTo("userId", userId)
-                .orderBy("sharedAt", Query.Direction.DESCENDING)
-                .limit(size);
+    public List<Trip> searchPublicTrips(String keyword) {
+        try {
+            String kw = keyword.toLowerCase();
 
-        if (!isOwner) {
-            if (isFollower) {
-                // public + follower
-                query = query.whereIn("isPublic", List.of("public", "follower"));
-            } else {
-                // chỉ public
-                query = query.whereEqualTo("isPublic", "public");
+            QuerySnapshot snapshot = db.collection(COLLECTION)
+                    .whereEqualTo("isPublic", "public")
+                    .get()
+                    .get();
+
+            List<Trip> result = new ArrayList<>();
+
+            for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                Trip trip = mapDocToTrip(doc);
+
+                if (
+                    contains(trip.getTitle(), kw)
+                    || contains(trip.getTags(), kw)
+                    || contains(trip.getContent(), kw)
+                ) {
+                    result.add(trip);
+                }
             }
+
+            return result;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return List.of();
         }
-
-        QuerySnapshot snapshot = query.get().get();
-
-        List<Trip> result = new ArrayList<>();
-        for (DocumentSnapshot doc : snapshot.getDocuments()) {
-            result.add(mapDocToTrip(doc));
-        }
-
-        return result;
     }
 
+
+
+    private boolean contains(String source, String kw) {
+        return source != null && source.toLowerCase().contains(kw);
+    }
 }
+
+

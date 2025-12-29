@@ -1,10 +1,10 @@
 package com.datn.discover_service.model;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.google.cloud.Timestamp;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -33,6 +33,9 @@ public class Trip {
     private String content; // User's feelings/review about their trip
     private String tags; // JSON array: ["food", "beach", "adventure"] for categorization
     private List<Plan> plans;
-    private LocalDateTime createdAt;
-    private LocalDateTime sharedAt; // Timestamp when trip was first shared
+    private Timestamp  createdAt;
+    private Timestamp    sharedAt; // Timestamp when trip was first shared
+    @Builder.Default
+    private Integer likeCount = 0;
+
 }

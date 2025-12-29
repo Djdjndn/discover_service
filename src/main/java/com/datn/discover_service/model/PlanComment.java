@@ -1,11 +1,10 @@
 package com.datn.discover_service.model;
-import java.time.LocalDateTime;
+import com.google.cloud.Timestamp;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,5 +16,5 @@ public class PlanComment {
     private String userId; // Reference to User (Firebase UID)
     private Long parentId; // Support for nested/threaded comments
     private String content;
-    private LocalDateTime createdAt;
+    private Timestamp  createdAt;
 }

@@ -168,10 +168,7 @@ public class PlanService {
     }
 
     private void updateTripLike(String tripId, int delta) throws Exception {
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Trip not found"));
 
-        trip.setLikeCount(Math.max(0, trip.getLikeCount() + delta));
-        tripRepository.save(trip); // ✅ save merge likeCount only
+        tripRepository.updateLikeCount(tripId, delta);
     }
 }

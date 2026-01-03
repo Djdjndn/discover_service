@@ -1,5 +1,6 @@
 package com.datn.discover_service.service;
 
+import java.time.ZoneId;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -11,6 +12,7 @@ import com.datn.discover_service.model.Trip;
 import com.datn.discover_service.model.User;
 import com.datn.discover_service.repository.TripRepository;
 import com.datn.discover_service.repository.UsersRepository;
+import com.google.cloud.Timestamp;
 
 import lombok.RequiredArgsConstructor;
 
@@ -55,6 +57,18 @@ public class SearchService {
     }
 
     private TripSearchDTO toTripDTO(Trip t) {
+
+        // 1. Convert LocalDateTime -> Timestamp (đúng kiểu DTO)
+        Timestamp sharedAtTs = null;
+        if (t.getSharedAt() != null) {
+            sharedAtTs = Timestamp.ofTimeSecondsAndNanos(
+                    t.getSharedAt()
+                            .atZone(ZoneId.systemDefault())
+                            .toEpochSecond(),
+                    t.getSharedAt().getNano()
+            );
+        }
+
         return TripSearchDTO.builder()
                 .id(t.getId())
                 .title(t.getTitle())
@@ -62,10 +76,11 @@ public class SearchService {
                 .coverPhoto(t.getCoverPhoto())
                 .tags(t.getTags())
                 .userId(t.getUserId())
-                .sharedAt(t.getSharedAt())
-                .likeCount(t.getLikeCount())
+                .sharedAt(sharedAtTs)     // ✅ ĐÚNG KIỂU
+                .likeCount(0)             // ✅ KHÔNG lấy từ Trip
                 .build();
     }
+
 
     private UserSearchDTO toUserDTO(User u) {
         return UserSearchDTO.builder()

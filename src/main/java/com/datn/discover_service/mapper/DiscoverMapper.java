@@ -1,7 +1,6 @@
 package com.datn.discover_service.mapper;
 
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,7 +9,6 @@ import com.datn.discover_service.model.Trip;
 import com.datn.discover_service.model.User;
 import com.datn.discover_service.repository.FollowRepository;
 import com.datn.discover_service.repository.UsersRepository;
-import com.google.cloud.Timestamp;
 
 public class DiscoverMapper {
 
@@ -45,13 +43,9 @@ public class DiscoverMapper {
             item.setFollowing(isFollowing);
 
             // ✅ FIX CHUẨN: Timestamp → LocalDateTime
-            Timestamp ts = trip.getSharedAt();
-            if (ts != null) {
-                LocalDateTime ldt = ts.toDate()
-                        .toInstant()
-                        .atZone(ZoneId.systemDefault())
-                        .toLocalDateTime();
-                item.setSharedAt(ldt);
+            LocalDateTime sharedAt = trip.getSharedAt();
+            if (sharedAt != null) {
+                item.setSharedAt(sharedAt);
             }
 
             if (user != null) {

@@ -51,21 +51,19 @@ public class DiscoverService {
     // 🔥 Share trip (Controller cần)
     // =========================
     public void shareTrip(ShareTripRequest request) throws Exception {
-    Trip trip = tripRepository.getTrip(request.getTripId());
-    if (trip == null) {
-        throw new RuntimeException("Trip not found");
+
+        // 1. Check trip tồn tại
+        Trip trip = tripRepository.getTrip(request.getTripId());
+        if (trip == null) {
+            throw new RuntimeException("Trip not found");
+        }
+
+        // 2. Chỉ update field cần thiết, KHÔNG mutate Trip
+        tripRepository.updateShareInfo(
+                request.getTripId(),
+                request.getContent(),
+                request.getTags()
+        );
     }
 
-    LocalDateTime now = LocalDateTime.now();
-    Instant instant = now.atZone(ZoneId.systemDefault()).toInstant();
-
-    Timestamp timestamp = Timestamp.ofTimeSecondsAndNanos(
-            instant.getEpochSecond(),
-            instant.getNano()
-    );
-
-    trip.setSharedAt(timestamp);
-
-    tripRepository.save(trip);
-}
 }

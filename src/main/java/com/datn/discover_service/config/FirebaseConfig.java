@@ -38,3 +38,4 @@ public class FirebaseConfig {
         return FirestoreClient.getFirestore();
     }
 }
+//Path=/api/discover/**,/api/search/**,/api/profile/**,/api/follow/**,/api/plans/**

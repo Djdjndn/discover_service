@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.datn.discover_service.dto.DiscoverItem;
+import com.datn.discover_service.dto.FollowerResponse;
 import com.datn.discover_service.dto.ProfileResponse;
+import com.datn.discover_service.service.FollowService;
 import com.datn.discover_service.service.ProfileService;
 
 @RestController
@@ -19,6 +21,9 @@ public class ProfileController {
 
     @Autowired
     private ProfileService profileService;
+
+    @Autowired
+    private FollowService followService;
 
     @GetMapping("/{userId}/trips")
     public List<DiscoverItem> getUserTrips(
@@ -32,7 +37,12 @@ public class ProfileController {
     }
 
     @GetMapping("/{userId}")
-    public ProfileResponse getUserProfile(@PathVariable String userId) throws Exception {
-    return profileService.getUserProfile(userId);
-}
+        public ProfileResponse getUserProfile(@PathVariable String userId) throws Exception {
+        return profileService.getUserProfile(userId);
+    }
+
+    @GetMapping("/{userId}/followers")
+    public List<FollowerResponse> getFollowers(@PathVariable String userId) throws Exception {
+        return followService.getFollowers(userId);
+    }
 }

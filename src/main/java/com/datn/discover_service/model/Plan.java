@@ -36,7 +36,7 @@ public class Plan {
     private PlanType type;
 
     private List<PlanLike> likes;
-    private List<PlanComment> comments;
+    private List<PlanComment> comments = new ArrayList<>();
 
     private String createdAt;
     private long likeCount;

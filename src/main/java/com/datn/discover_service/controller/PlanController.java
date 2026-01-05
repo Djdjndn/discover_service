@@ -11,8 +11,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.datn.discover_service.dto.CommentDto;
+import com.datn.discover_service.dto.CommentRequest;
 import com.datn.discover_service.dto.PlanDetailResponse;
-import com.datn.discover_service.model.PlanComment;
 import com.datn.discover_service.service.PlanService;
 
 @RestController
@@ -50,7 +51,7 @@ public class PlanController {
     }
 
     @GetMapping("/{planId}/comments")
-    public List<PlanComment> getComments(@PathVariable String planId) {
+    public List<CommentDto> getComments(@PathVariable String planId) {
         return planService.getComments(planId);
     }
 
@@ -58,8 +59,8 @@ public class PlanController {
     public void postComment(
             @PathVariable String planId,
             @RequestHeader("X-USER-ID") String userId,
-            @RequestBody String content
+            @RequestBody CommentRequest request
     ) {
-        planService.addComment(planId, userId, content);
+        planService.addComment(planId, userId, request.getContent(), request.getParentId());
     }
 }

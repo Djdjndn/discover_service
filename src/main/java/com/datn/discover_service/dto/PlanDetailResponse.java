@@ -20,4 +20,7 @@ public class PlanDetailResponse {
     private int likeCount;
     private int commentCount;
     private boolean liked;
+
+    private boolean isOwner;
+
 }

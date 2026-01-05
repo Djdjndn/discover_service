@@ -9,6 +9,7 @@ import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import com.datn.discover_service.model.User;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
@@ -81,11 +82,49 @@ public class FollowRepository {
     }
 
     public long countFollowers(String userId) throws Exception {
-    return db.collection("follows")
-        .whereEqualTo("followingId", userId)
-        .get()
-        .get()
-        .size();
-}
+        return db.collection(COLLECTION)
+            .whereEqualTo(FIELD_FOLLOWING_ID, userId)
+            .get()
+            .get()
+            .size();
+    }
+
+
+    // ========== GET FOLLOWER IDS ==========
+    // ========== GET FOLLOWERS (User list) ==========
+    public List<User> getFollowers(String userId) throws Exception {
+
+        // 1. Query bảng follows theo followingID
+        QuerySnapshot snapshot = db.collection(COLLECTION)
+                .whereEqualTo(FIELD_FOLLOWING_ID, userId)
+                .get()
+                .get();
+
+        List<User> result = new ArrayList<>();
+
+        // 2. Với mỗi followerID → lấy User
+        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+            String followerId = doc.getString(FIELD_FOLLOWER_ID);
+            if (followerId == null) continue;
+
+            DocumentSnapshot userDoc = db
+                    .collection("users")
+                    .document(followerId)
+                    .get()
+                    .get();
+
+            if (!userDoc.exists()) continue;
+
+            User user = userDoc.toObject(User.class);
+
+            // 🔒 đảm bảo id luôn có
+            user.setId(userDoc.getId());
+
+            result.add(user);
+        }
+
+        return result;
+    }
+
 
 }

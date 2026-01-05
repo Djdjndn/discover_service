@@ -2,26 +2,32 @@ package com.datn.discover_service.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.datn.discover_service.dto.CommentDto;
 import com.datn.discover_service.dto.PlanDetailResponse;
 import com.datn.discover_service.model.Plan;
 import com.datn.discover_service.model.PlanComment;
 import com.datn.discover_service.model.PlanLike;
 import com.datn.discover_service.model.Trip;
+import com.datn.discover_service.model.User;
 import com.datn.discover_service.repository.PlanRepository;
 import com.datn.discover_service.repository.TripRepository;
+import com.datn.discover_service.repository.UsersRepository;
 
 @Service
 public class PlanService {
 
     private final PlanRepository planRepository;
     private final TripRepository tripRepository;
+    private final UsersRepository usersRepository;
 
-    public PlanService(PlanRepository planRepository, TripRepository tripRepository) {
+    public PlanService(PlanRepository planRepository, TripRepository tripRepository, UsersRepository usersRepository) {
         this.planRepository = planRepository;
         this.tripRepository = tripRepository;
+        this.usersRepository = usersRepository;
     }
 
     public PlanDetailResponse getPlanDetail(String planId, String userId) {
@@ -128,19 +134,47 @@ public class PlanService {
         }
     }
 
-    public List<PlanComment> getComments(String planId) {
+    public List<CommentDto> getComments(String planId) {
         try {
             Plan plan = planRepository.findById(planId)
                     .orElseThrow(() -> new RuntimeException("Plan not found"));
 
-            return plan.getComments() != null ? plan.getComments() : List.of();
+            List<PlanComment> comments = plan.getComments() != null ? plan.getComments() : List.of();
+            
+            // Convert to CommentDto with user info
+            return comments.stream().map(comment -> {
+                try {
+                    User user = usersRepository.getUser(comment.getUserId());
+                    return CommentDto.builder()
+                            .id(comment.getId())
+                            .planId(comment.getPlanId())
+                            .userId(comment.getUserId())
+                            .userName(user != null ? (user.getFirstName() + " " + user.getLastName()) : "Unknown User")
+                            .userAvatar(user != null ? user.getProfilePicture() : null)
+                            .parentId(comment.getParentId())
+                            .content(comment.getContent())
+                            .createdAt(comment.getCreatedAt() != null ? comment.getCreatedAt().toDate().getTime() : System.currentTimeMillis())
+                            .build();
+                } catch (Exception e) {
+                    return CommentDto.builder()
+                            .id(comment.getId())
+                            .planId(comment.getPlanId())
+                            .userId(comment.getUserId())
+                            .userName("Unknown User")
+                            .userAvatar(null)
+                            .parentId(comment.getParentId())
+                            .content(comment.getContent())
+                            .createdAt(System.currentTimeMillis())
+                            .build();
+                }
+            }).collect(Collectors.toList());
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to get comments", e);
         }
     }
 
-    public void addComment(String planId, String userId, String content) {
+    public void addComment(String planId, String userId, String content, String parentId) {
         try {
             Plan plan = planRepository.findById(planId)
                     .orElseThrow(() -> new RuntimeException("Plan not found"));
@@ -149,17 +183,18 @@ public class PlanService {
                 plan.setComments(new ArrayList<>());
             }
 
-            // ✅ FIX: createdAt để null (tránh serialize LocalDateTime)
+            // Save with Firestore Timestamp
             plan.getComments().add(
                     PlanComment.builder()
                             .id(System.currentTimeMillis())
-                            .planId(Long.parseLong(planId))
+                            .planId(planId)
                             .userId(userId)
+                            .parentId(parentId)
                             .content(content)
-                            .createdAt(null)
+                            .createdAt(com.google.cloud.Timestamp.now())
                             .build()
             );
-
+            
             planRepository.save(plan);
 
         } catch (Exception e) {

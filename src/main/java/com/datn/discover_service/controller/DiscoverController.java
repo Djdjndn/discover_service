@@ -44,7 +44,7 @@ public class DiscoverController {
     }
 
     @PostMapping("/share-trip")
-    public void shareTrip(@RequestBody ShareTripRequest req) throws Exception {
-        discoverService.shareTrip(req);
-}
+        public void shareTrip(@RequestBody ShareTripRequest req) throws Exception {
+            discoverService.shareTrip(req);
+    }
 }

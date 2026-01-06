@@ -8,12 +8,15 @@ import org.springframework.stereotype.Service;
 import com.datn.discover_service.dto.FollowerResponse;
 import com.datn.discover_service.model.User;
 import com.datn.discover_service.repository.FollowRepository;
+import com.datn.discover_service.repository.UsersRepository;
 
 @Service
 public class FollowService {
 
     @Autowired
     private FollowRepository followRepository;
+    @Autowired
+    private UsersRepository usersRepository;
 
     public void follow(String followerId, String followingId) throws Exception {
         followRepository.follow(followerId, followingId);
@@ -38,4 +41,17 @@ public class FollowService {
             )
         ).toList();
     }
+
+    public List<User> getFollowersRaw(String userId) throws Exception {
+
+        List<String> followerIds = followRepository.findFollowerIdsByFollowingId(userId);
+
+        if (followerIds.isEmpty()) {
+            return List.of();
+        }
+
+        return usersRepository.findUsersByIds(followerIds);
+    }
+
+
 }

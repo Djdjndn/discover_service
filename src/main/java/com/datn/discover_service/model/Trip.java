@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.datn.discover_service.dto.SharedUser;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.google.cloud.firestore.annotation.IgnoreExtraProperties;
 
@@ -48,11 +49,19 @@ public class Trip {
     private List<User> members;
 
     /** Danh sách user được share khi isPublic = follower */
-    private List<User> sharedWithUsers;
+    private List<SharedUser> sharedWithUsers;
 
     /** Thời điểm tạo trip */
     private LocalDateTime createdAt;
 
     /** Thời điểm share trip lên feed */
     private LocalDateTime sharedAt;
+
+    public List<SharedUser> getSharedWithUsers() {
+        return sharedWithUsers;
+    }
+
+    public void setSharedWithUsers(List<SharedUser> sharedWithUsers) {
+        this.sharedWithUsers = sharedWithUsers;
+    }
 }

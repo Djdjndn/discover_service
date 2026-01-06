@@ -11,7 +11,6 @@ import com.datn.discover_service.dto.PlanDetailResponse;
 import com.datn.discover_service.model.Plan;
 import com.datn.discover_service.model.PlanComment;
 import com.datn.discover_service.model.PlanLike;
-import com.datn.discover_service.model.Trip;
 import com.datn.discover_service.model.User;
 import com.datn.discover_service.repository.PlanRepository;
 import com.datn.discover_service.repository.TripRepository;
@@ -153,7 +152,7 @@ public class PlanService {
                             .userAvatar(user != null ? user.getProfilePicture() : null)
                             .parentId(comment.getParentId())
                             .content(comment.getContent())
-                            .createdAt(comment.getCreatedAt() != null ? comment.getCreatedAt().toDate().getTime() : System.currentTimeMillis())
+                            .createdAt(comment.getCreatedAt() != null ? comment.getCreatedAt().toDate().getTime() : null)
                             .build();
                 } catch (Exception e) {
                     return CommentDto.builder()

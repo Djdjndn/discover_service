@@ -8,6 +8,7 @@ import lombok.Data;
 public class ShareTripRequest  {
     private String tripId;
     private String content;
-    private String isPublic; // public | follower
+    private String isPublic; // PUBLIC | FOLLOWER | MEMBER
     private String tags;
+    private List<String> sharedWithUsers;
 }

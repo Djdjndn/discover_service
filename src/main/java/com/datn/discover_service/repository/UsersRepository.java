@@ -1,5 +1,6 @@
 package com.datn.discover_service.repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,6 +42,30 @@ public class UsersRepository {
 
     private boolean contains(String source, String kw) {
         return source != null && source.toLowerCase().contains(kw);
+    }
+
+    public List<User> findUsersByIds(List<String> userIds) {
+
+    List<User> result = new ArrayList<>();
+
+        try {
+            for (String id : userIds) {
+                DocumentSnapshot doc = db.collection("users")
+                        .document(id)
+                        .get()
+                        .get();
+
+                if (!doc.exists()) continue;
+
+                User user = doc.toObject(User.class);
+                user.setId(doc.getId());
+                result.add(user);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
     }
 }
 

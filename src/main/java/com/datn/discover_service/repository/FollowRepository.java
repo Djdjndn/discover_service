@@ -89,7 +89,6 @@ public class FollowRepository {
             .size();
     }
 
-
     // ========== GET FOLLOWER IDS ==========
     // ========== GET FOLLOWERS (User list) ==========
     public List<User> getFollowers(String userId) throws Exception {
@@ -126,5 +125,20 @@ public class FollowRepository {
         return result;
     }
 
+    public List<String> findFollowerIdsByFollowingId(String userId) throws Exception {
 
+        QuerySnapshot snapshot = db.collection(COLLECTION)
+                .whereEqualTo(FIELD_FOLLOWING_ID, userId)
+                .get()
+                .get();
+
+        List<String> result = new ArrayList<>();
+        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+            String followerId = doc.getString(FIELD_FOLLOWER_ID);
+            if (followerId != null) {
+                result.add(followerId);
+            }
+        }
+        return result;
+    }
 }

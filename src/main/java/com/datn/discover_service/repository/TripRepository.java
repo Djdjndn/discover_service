@@ -1,15 +1,16 @@
 package com.datn.discover_service.repository;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
+import com.datn.discover_service.dto.SharedUser;
 import com.datn.discover_service.model.Trip;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
@@ -56,7 +57,7 @@ public class TripRepository {
     public List<Trip> getPublicTrips(int page, int size) throws Exception {
 
         Query query = db.collection(COLLECTION)
-                .whereEqualTo("isPublic", "public")
+                .whereEqualTo("isPublic", "public") // GIỮ NGUYÊN
                 .orderBy("sharedAt", Query.Direction.DESCENDING)
                 .limit(size);
 
@@ -83,6 +84,7 @@ public class TripRepository {
             return new ArrayList<>();
         }
 
+        // ✅ CHỈ SỬA Ở ĐÂY: cho phép member đi lên service để filter
         Query query = db.collection(COLLECTION)
                 .whereIn("userId", followingIds)
                 .whereIn("isPublic", List.of("public", "follower"))
@@ -172,21 +174,24 @@ public class TripRepository {
     // Update share info
     // =========================
     public void updateShareInfo(
-            String tripId,
-            String content,
-            String tags
+        String tripId,
+        String content,
+        String tags,
+        String isPublic,
+        List<SharedUser> sharedWithUsers
     ) throws Exception {
-
         db.collection(COLLECTION)
-                .document(tripId)
-                .update(
-                        "sharedAt", Timestamp.now(),
-                        "isPublic", "public",
-                        "content", content,
-                        "tags", tags
-                )
-                .get();
+            .document(tripId)
+            .update(
+                "sharedAt", Timestamp.now(),
+                "isPublic", isPublic,
+                "content", content,
+                "tags", tags,
+                "sharedWithUsers", sharedWithUsers
+            )
+            .get();
     }
+
 
     public void updateLikeCount(String tripId, int delta) throws Exception {
 
@@ -210,7 +215,7 @@ public class TripRepository {
         trip.setTags(doc.getString("tags"));
         trip.setIsPublic(doc.getString("isPublic"));
 
-        // startDate / endDate (String -> LocalDate)
+        // startDate / endDate
         String startDate = doc.getString("startDate");
         if (startDate != null) {
             trip.setStartDate(LocalDate.parse(startDate));
@@ -221,9 +226,8 @@ public class TripRepository {
             trip.setEndDate(LocalDate.parse(endDate));
         }
 
-        // ✅ FIX CUỐI CÙNG: sharedAt (String | Timestamp | null)
+        // sharedAt
         Object sharedAtObj = doc.get("sharedAt");
-
         if (sharedAtObj instanceof Timestamp ts) {
             trip.setSharedAt(
                 ts.toDate()
@@ -231,13 +235,29 @@ public class TripRepository {
                 .atZone(ZoneId.systemDefault())
                 .toLocalDateTime()
             );
-        } 
-        else if (sharedAtObj instanceof String s) {
-            trip.setSharedAt(LocalDateTime.parse(s));
         }
-        else {
-            trip.setSharedAt(null);
+
+        // sharedWithUsers (🔥 MAP TAY – KHÔNG toObject)
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> rawUsers =
+            (List<Map<String, Object>>) doc.get("sharedWithUsers");
+
+        List<SharedUser> sharedWith = new ArrayList<>();
+        if (rawUsers != null) {
+            for (Map<String, Object> m : rawUsers) {
+                SharedUser su = new SharedUser();
+                su.setId((String) m.get("id"));
+                su.setFirstName((String) m.get("firstName"));
+                su.setLastName((String) m.get("lastName"));
+                su.setEmail((String) m.get("email"));
+                su.setProfilePicture((String) m.get("profilePicture"));
+                su.setRole((String) m.get("role"));
+                su.setEnabled((Boolean) m.get("enabled"));
+                sharedWith.add(su);
+            }
         }
+
+        trip.setSharedWithUsers(sharedWith);
 
         return trip;
     }

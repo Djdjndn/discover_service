@@ -1,7 +1,7 @@
 package com.datn.discover_service.repository;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -12,12 +12,12 @@ import org.springframework.stereotype.Repository;
 
 import com.datn.discover_service.dto.SharedUser;
 import com.datn.discover_service.model.Trip;
-import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.FieldValue;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QuerySnapshot;
+
 
 @Repository
 public class TripRepository {
@@ -183,7 +183,7 @@ public class TripRepository {
         db.collection(COLLECTION)
             .document(tripId)
             .update(
-                "sharedAt", Timestamp.now(),
+                "sharedAt", LocalDateTime.now().toString(),
                 "isPublic", isPublic,
                 "content", content,
                 "tags", tags,
@@ -228,13 +228,11 @@ public class TripRepository {
 
         // sharedAt
         Object sharedAtObj = doc.get("sharedAt");
-        if (sharedAtObj instanceof Timestamp ts) {
-            trip.setSharedAt(
-                ts.toDate()
-                .toInstant()
-                .atZone(ZoneId.systemDefault())
-                .toLocalDateTime()
-            );
+
+        if (sharedAtObj instanceof String s && !s.isBlank()) {
+            trip.setSharedAt(LocalDateTime.parse(s));
+        } else {
+            trip.setSharedAt(null);
         }
 
         // sharedWithUsers (🔥 MAP TAY – KHÔNG toObject)

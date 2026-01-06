@@ -159,6 +159,7 @@ public class DiscoverService {
         //     && trip.getMemberIds().contains(viewerId)) {
         //      return true;
         // }
+        
         String isPublic = trip.getIsPublic();
         if (isPublic == null) return false;
 

@@ -8,7 +8,6 @@ import lombok.Data;
 public class PlanDetailResponse {
 
     private String planId;
-
     private String title;
     private String address;
     private String location;

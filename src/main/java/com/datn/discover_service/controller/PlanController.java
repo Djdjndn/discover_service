@@ -63,4 +63,13 @@ public class PlanController {
     ) {
         planService.addComment(planId, userId, request.getContent(), request.getParentId());
     }
+
+    @DeleteMapping("/{planId}/comments/{commentId}")
+    public void deleteComment(
+            @PathVariable String planId,
+            @PathVariable Long commentId,
+            @RequestHeader("X-USER-ID") String userId
+    ) {
+        planService.deleteComment(planId, commentId, userId);
+    }
 }

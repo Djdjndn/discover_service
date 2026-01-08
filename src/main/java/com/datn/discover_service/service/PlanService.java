@@ -11,6 +11,7 @@ import com.datn.discover_service.dto.PlanDetailResponse;
 import com.datn.discover_service.model.Plan;
 import com.datn.discover_service.model.PlanComment;
 import com.datn.discover_service.model.PlanLike;
+import com.datn.discover_service.model.Trip;
 import com.datn.discover_service.model.User;
 import com.datn.discover_service.repository.PlanRepository;
 import com.datn.discover_service.repository.TripRepository;
@@ -39,7 +40,7 @@ public class PlanService {
 
             boolean isLiked = likes.stream()
                     .anyMatch(like -> like.getUserId().equals(userId));
-
+            
             PlanDetailResponse res = new PlanDetailResponse();
             res.setPlanId(plan.getId());
             res.setTitle(plan.getTitle());
@@ -204,5 +205,39 @@ public class PlanService {
     private void updateTripLike(String tripId, int delta) throws Exception {
 
         tripRepository.updateLikeCount(tripId, delta);
+    }
+
+    public void deleteComment(String planId, Long commentId, String userId) {
+        try {
+            Plan plan = planRepository.findById(planId)
+                    .orElseThrow(() -> new RuntimeException("Plan not found"));
+
+            if (plan.getComments() == null) return;
+
+            // 🔥 LẤY TRIP → LẤY CHỦ TUS
+            Trip trip = tripRepository.getTrip(plan.getTripId());
+            if (trip == null) {
+                throw new RuntimeException("Trip not found");
+            }
+
+            boolean isPlanOwner = userId.equals(trip.getUserId());
+
+            boolean removed = plan.getComments().removeIf(c ->
+                c.getId().equals(commentId)
+                && (
+                    c.getUserId().equals(userId) // người viết comment
+                    || isPlanOwner               // 🔥 chủ tus
+                )
+            );
+
+            if (!removed) {
+                throw new RuntimeException("No permission to delete comment");
+            }
+
+            planRepository.save(plan);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete comment", e);
+        }
     }
 }

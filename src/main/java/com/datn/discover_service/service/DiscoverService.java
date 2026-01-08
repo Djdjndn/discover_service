@@ -33,16 +33,16 @@ public class DiscoverService {
     }
 
     // =========================
-    // 🔥 Discover - Public
+    //  Discover - Public
     // =========================
     public List<DiscoverItem> getDiscoverList(String viewerId, int page, int size) throws Exception {
-        // 🔒 Public feed: CHỈ public
+        // Public feed: CHỈ public
         List<Trip> trips = tripRepository.getPublicTrips(page, size);
         return DiscoverMapper.toDiscoverItems(trips, viewerId, followRepository, usersRepository);
     }
 
     // =========================
-    // 🔥 Discover - Following (CÓ MEMBER)
+    //  Discover - Following (CÓ MEMBER)
     // =========================
     public List<DiscoverItem> getDiscoverListFollowing(String viewerId, int page, int size) throws Exception {
 
@@ -72,42 +72,35 @@ public class DiscoverService {
 
 
     // =========================
-    // 🔥 Share trip
+    //  Share trip
     // =========================
     public void shareTrip(ShareTripRequest request) throws Exception {
 
-        // 1. Check trip tồn tại
         Trip trip = tripRepository.getTrip(request.getTripId());
         if (trip == null) {
             throw new RuntimeException("Trip not found");
         }
 
-        // 2. Resolve isPublic
         String isPublic = request.getIsPublic() != null
                 ? request.getIsPublic()
                 : trip.getIsPublic();
 
-        // 3. Resolve content
         String content = request.getContent() != null
                 ? request.getContent()
                 : trip.getContent();
 
-        // 4. Resolve tags
         String tags = request.getTags() != null
                 ? request.getTags()
                 : trip.getTags();
 
-        // 5. Resolve sharedWithUsers
         List<SharedUser> sharedUsers;
 
         if (request.getSharedWithUsers() != null) {
 
-            // client gửi []
             if (request.getSharedWithUsers().isEmpty()) {
                 sharedUsers = List.of();
 
             } else {
-                // client gửi list userId
                 List<User> users = usersRepository.findUsersByIds(
                         request.getSharedWithUsers()
                 );
@@ -128,11 +121,10 @@ public class DiscoverService {
             }
 
         } else {
-            // client không gửi field → giữ nguyên
             sharedUsers = trip.getSharedWithUsers();
         }
 
-        // 6. Update Firestore
+        // Update Firestore
         tripRepository.updateShareInfo(
                 trip.getId(),
                 content,
